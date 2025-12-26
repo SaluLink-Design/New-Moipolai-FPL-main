@@ -76,7 +76,7 @@ export const apiService = {
 
     // Teams endpoints
     getTeamAnalysis: (teamData) =>
-        api.post('/api/teams/analysis', teamData),
+        api.post('/api/teams/analyze', teamData),
 
     getCaptainSuggestion: (teamData) =>
         api.post('/api/teams/captain', teamData),
