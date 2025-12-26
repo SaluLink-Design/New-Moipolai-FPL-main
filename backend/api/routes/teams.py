@@ -130,6 +130,12 @@ async def get_captain_suggestion(team_data: dict):
             "vice_captain": _create_player_prediction(vice_captain)
         }
 
+    except httpx.TimeoutException as e:
+        logger.error(f"FPL API timeout while getting captain suggestion: {e}")
+        raise HTTPException(status_code=504, detail="FPL API service is slow. Please try again.")
+    except httpx.HTTPError as e:
+        logger.error(f"FPL API error while getting captain suggestion: {e}")
+        raise HTTPException(status_code=503, detail="FPL API is currently unavailable.")
     except Exception as e:
         logger.error(f"Error getting captain suggestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
