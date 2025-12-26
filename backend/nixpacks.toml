@@ -1,11 +1,8 @@
 # Nixpacks configuration for Railway
 # This optimizes the build process for your Python backend
 
-[providers]
-python = "3.11"
-
 [phases.setup]
-nixPkgs = ["gcc", "libffi"]
+nixPkgs = ["...", "gcc", "libffi"]
 
 [phases.build]
 cmds = [
