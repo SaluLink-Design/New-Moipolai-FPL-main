@@ -14,6 +14,11 @@ from services.data_cache import cache_manager
 from services.fpl_api import fpl_client
 from services.supabase_client import supabase_service
 
+# Create necessary directories before logging setup
+Path("logs").mkdir(exist_ok=True)
+Path("uploads").mkdir(exist_ok=True)
+Path(settings.model_path).mkdir(parents=True, exist_ok=True)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level),
