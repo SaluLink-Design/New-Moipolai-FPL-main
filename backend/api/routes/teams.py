@@ -86,6 +86,12 @@ async def analyze_team(team_data: dict):
 
     except HTTPException:
         raise
+    except httpx.TimeoutException as e:
+        logger.error(f"FPL API timeout while analyzing team: {e}", exc_info=True)
+        raise HTTPException(status_code=504, detail="FPL API service is slow. Please try again in a moment.")
+    except httpx.HTTPError as e:
+        logger.error(f"FPL API error while analyzing team: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="FPL API is currently unavailable. Please try again later.")
     except Exception as e:
         logger.error(f"Error analyzing team: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
