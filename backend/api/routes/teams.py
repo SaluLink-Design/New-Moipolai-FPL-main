@@ -168,6 +168,12 @@ async def get_bench_order(team_data: dict):
             "bench_order": [p["id"] for p in bench_players]
         }
 
+    except httpx.TimeoutException as e:
+        logger.error(f"FPL API timeout while optimizing bench: {e}")
+        raise HTTPException(status_code=504, detail="FPL API service is slow. Please try again.")
+    except httpx.HTTPError as e:
+        logger.error(f"FPL API error while optimizing bench: {e}")
+        raise HTTPException(status_code=503, detail="FPL API is currently unavailable.")
     except Exception as e:
         logger.error(f"Error optimizing bench: {e}")
         raise HTTPException(status_code=500, detail=str(e))
