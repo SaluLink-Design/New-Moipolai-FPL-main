@@ -3,6 +3,7 @@ FPL API Client - Handles all interactions with the official FPL API
 """
 import httpx
 import logging
+import asyncio
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from config import settings
