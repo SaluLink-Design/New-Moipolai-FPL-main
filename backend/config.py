@@ -65,12 +65,18 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     
     # CORS
-    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000,https://1ecd199f81f742549451b8f8384c6014-br-49debbd126ee4555bb3220ec1.fly.dev"
-    
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000"
+
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins into a list."""
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        origins = [origin.strip() for origin in self.cors_origins.split(",")]
+
+        # In production, allow all fly.dev deployments for flexibility
+        if self.env == "production":
+            origins.append("https://*.fly.dev")
+
+        return origins
     
     # Monitoring
     sentry_dsn: str = ""

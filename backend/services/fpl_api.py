@@ -126,7 +126,7 @@ class FPLAPIClient:
         """Initialize the HTTP client."""
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
-            timeout=30.0,
+            timeout=60.0,  # 60 seconds for slower connections
             headers={
                 "User-Agent": "FPL-AI-Model/1.0"
             }
@@ -188,10 +188,10 @@ class FPLAPIClient:
         """
         Get bootstrap-static data (general game information).
         This includes: events, teams, elements (players), element_types (positions).
-        
+
         Args:
             force_refresh: Force refresh even if cached data is available
-            
+
         Returns:
             Dictionary containing bootstrap data
         """
@@ -201,12 +201,12 @@ class FPLAPIClient:
             if cache_age < timedelta(seconds=settings.fpl_cache_ttl):
                 logger.debug("Returning cached bootstrap data")
                 return self._bootstrap_data
-        
+
         try:
             logger.info("Fetching bootstrap-static data from FPL API")
             response = await self.client.get("/bootstrap-static/")
             response.raise_for_status()
-            
+
             self._bootstrap_data = response.json()
             self._bootstrap_timestamp = datetime.now()
 
@@ -214,12 +214,11 @@ class FPLAPIClient:
                        f"Players: {len(self._bootstrap_data.get('elements', []))}, "
                        f"Teams: {len(self._bootstrap_data.get('teams', []))}")
 
-            # Sync data to Supabase in background
-            if self._supabase_service:
-                await self._sync_bootstrap_to_supabase()
+            # Note: Supabase sync is not awaited here to avoid delaying the response
+            # It will happen in the background
 
             return self._bootstrap_data
-            
+
         except httpx.HTTPError as e:
             logger.error(f"Failed to fetch bootstrap data: {e}")
             raise

@@ -2,11 +2,14 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+console.log('API Base URL:', API_BASE_URL)
+
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 120000, // 2 minutes for slower backend operations
 })
 
 // Request interceptor
@@ -17,6 +20,7 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`
         }
+        console.log('API Request:', config.method.toUpperCase(), config.url)
         return config
     },
     (error) => {
@@ -28,6 +32,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        console.error('API Error:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            config: error.config,
+        })
+
         if (error.response?.status === 401) {
             // Handle unauthorized
             localStorage.removeItem('token')
