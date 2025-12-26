@@ -113,6 +113,8 @@ const TeamAnalysis = () => {
                 errorMessage = 'Network error. Please check your connection and try again.'
             } else if (err.response?.data?.detail) {
                 errorMessage = err.response.data.detail
+            } else if (err.message) {
+                errorMessage = err.message
             }
 
             setError(errorMessage)
