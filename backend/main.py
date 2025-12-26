@@ -70,14 +70,33 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Add middleware - with support for wildcard domains
+cors_origins = settings.cors_origins_list
+
+# If any origin contains wildcard, use allow_origin_regex instead
+has_wildcard = any("*" in origin for origin in cors_origins)
+if has_wildcard:
+    # Remove wildcard origins from list and convert to regex
+    static_origins = [o for o in cors_origins if "*" not in o]
+    # Build regex pattern for wildcard domains
+    pattern = r"https://.*\.fly\.dev"
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=static_origins,
+        allow_origin_regex=pattern,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
