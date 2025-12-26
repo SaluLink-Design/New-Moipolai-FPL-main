@@ -226,12 +226,29 @@ class FPLAPIClient:
     async def get_players(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
         Get all players (elements) from bootstrap data.
-        
+        Falls back to Supabase if FPL API is unavailable.
+
         Returns:
             List of player dictionaries
         """
-        bootstrap = await self.get_bootstrap_static(force_refresh)
-        return bootstrap.get("elements", [])
+        try:
+            bootstrap = await self.get_bootstrap_static(force_refresh)
+            return bootstrap.get("elements", [])
+        except Exception as e:
+            logger.warning(f"Failed to fetch players from FPL API: {e}. Attempting Supabase fallback...")
+
+            # Fallback to Supabase
+            if self._supabase_service:
+                try:
+                    players = await self._supabase_service.get_players()
+                    if players:
+                        logger.info(f"Retrieved {len(players)} players from Supabase fallback")
+                        return players
+                except Exception as fallback_error:
+                    logger.error(f"Supabase fallback also failed: {fallback_error}")
+
+            # If all fails, raise the original error
+            raise
     
     async def get_teams(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
