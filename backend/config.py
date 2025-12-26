@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     
     # CORS
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000,https://1ecd199f81f742549451b8f8384c6014-br-49debbd126ee4555bb3220ec1.fly.dev"
     
     @property
     def cors_origins_list(self) -> List[str]:

@@ -64,25 +64,8 @@ export const apiService = {
         api.post('/api/transfers/evaluate', transferData),
 
     // Teams endpoints
-    getTeamAnalysis: (teamData) => {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseKey) {
-            console.error('Supabase credentials not configured:', { supabaseUrl, supabaseKey: supabaseKey ? 'present' : 'missing' });
-            return Promise.reject(new Error('Supabase credentials not configured'));
-        }
-
-        const apiUrl = `${supabaseUrl}/functions/v1/analyze-team`;
-        console.log('Calling Edge Function:', apiUrl);
-
-        return axios.post(apiUrl, teamData, {
-            headers: {
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json',
-            },
-        });
-    },
+    getTeamAnalysis: (teamData) =>
+        api.post('/api/teams/analysis', teamData),
 
     getCaptainSuggestion: (teamData) =>
         api.post('/api/teams/captain', teamData),
