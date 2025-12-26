@@ -4,6 +4,7 @@ Teams API Routes
 from fastapi import APIRouter, HTTPException
 from typing import List
 import logging
+import httpx
 
 from models.fpl_models import TeamAnalysis, PlayerPrediction
 from services.fpl_api import fpl_client
