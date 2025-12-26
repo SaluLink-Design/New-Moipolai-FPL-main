@@ -126,7 +126,7 @@ class FPLAPIClient:
         """Initialize the HTTP client."""
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
-            timeout=30.0,
+            timeout=60.0,  # 60 seconds for slower connections
             headers={
                 "User-Agent": "FPL-AI-Model/1.0"
             }
