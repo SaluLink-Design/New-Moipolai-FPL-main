@@ -40,7 +40,7 @@ opencv-python==4.9.0.80
 rapidfuzz==3.6.1
 
 # HTTP Client
-httpx==0.26.0
+httpx==0.24.1
 aiohttp==3.9.1
 
 # Task Queue
@@ -58,7 +58,6 @@ mlflow==2.10.0
 pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
-httpx==0.26.0
 
 # Utilities
 python-dotenv==1.0.1
