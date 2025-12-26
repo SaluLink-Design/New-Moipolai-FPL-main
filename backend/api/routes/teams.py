@@ -31,11 +31,17 @@ async def analyze_team(team_data: dict):
         if not player_ids:
             raise HTTPException(status_code=400, detail="No players provided")
 
+        logger.info(f"Fetching player data for {len(player_ids)} players")
         all_players = await fpl_client.get_players()
+        logger.info(f"Fetched {len(all_players)} total players from FPL API")
+
         team_players = [p for p in all_players if p.get("id") in player_ids]
+        logger.info(f"Found {len(team_players)} team players")
 
         if len(team_players) != len(player_ids):
-            raise HTTPException(status_code=400, detail="Some players not found")
+            missing_ids = set(player_ids) - {p.get("id") for p in team_players}
+            logger.warning(f"Some players not found: {missing_ids}")
+            raise HTTPException(status_code=400, detail=f"Players not found: {missing_ids}")
 
         team_value = sum(p.get("now_cost", 0) for p in team_players) / 10.0
         predicted_points = sum(_calculate_simple_prediction(p) for p in team_players[:11])
@@ -48,6 +54,7 @@ async def analyze_team(team_data: dict):
             reverse=True
         )[0]
 
+        logger.info("Generating transfer suggestions")
         transfer_suggestions = _generate_transfer_suggestions(team_players, all_players)
 
         analysis_data = {
@@ -65,15 +72,21 @@ async def analyze_team(team_data: dict):
             "bench_order": player_ids[11:]
         }
 
-        analysis_id = await supabase_service.save_team_analysis(analysis_data)
-        logger.info(f"Team analysis saved with ID: {analysis_id}")
+        logger.info("Team analysis complete, saving to database")
+        # Save to database in background without blocking response
+        try:
+            analysis_id = await supabase_service.save_team_analysis(analysis_data)
+            logger.info(f"Team analysis saved with ID: {analysis_id}")
+        except Exception as save_error:
+            logger.error(f"Failed to save analysis to database: {save_error}")
+            # Don't fail the response if database save fails
 
         return TeamAnalysis(**analysis_data)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error analyzing team: {e}")
+        logger.error(f"Error analyzing team: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
