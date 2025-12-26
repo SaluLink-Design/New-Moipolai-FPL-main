@@ -111,6 +111,10 @@ const TeamAnalysis = () => {
                 errorMessage = 'Request timed out. The server is taking longer than expected. Please try again in a moment.'
             } else if (err.response?.status === 400) {
                 errorMessage = err.response?.data?.detail || 'Invalid team data.'
+            } else if (err.response?.status === 503) {
+                errorMessage = err.response?.data?.detail || 'FPL API is currently unavailable. Please try again later.'
+            } else if (err.response?.status === 504) {
+                errorMessage = err.response?.data?.detail || 'Server is taking too long to respond. Please try again in a moment.'
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.'
             } else if (err.message === 'Network Error') {
