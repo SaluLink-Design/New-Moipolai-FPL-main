@@ -76,7 +76,9 @@ export const apiService = {
 
     // Teams endpoints
     getTeamAnalysis: (teamData) =>
-        api.post('/api/teams/analyze', teamData),
+        api.post('/api/teams/analyze', teamData, {
+            timeout: 180000 // 3 minutes for heavy backend processing
+        }),
 
     getCaptainSuggestion: (teamData) =>
         api.post('/api/teams/captain', teamData),
