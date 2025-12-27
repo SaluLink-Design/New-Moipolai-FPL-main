@@ -33,13 +33,27 @@ async def analyze_team(team_data: dict):
             raise HTTPException(status_code=400, detail="No players provided")
 
         logger.info(f"Fetching player data for {len(player_ids)} players")
-        all_players = await fpl_client.get_players()
+        try:
+            all_players = await fpl_client.get_players()
+        except httpx.TimeoutException:
+            logger.error("FPL API timeout while fetching player data")
+            raise HTTPException(
+                status_code=504,
+                detail="FPL API is responding slowly. Please try again in a moment."
+            )
+        except Exception as e:
+            logger.error(f"Failed to fetch player data: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to fetch player data. Please try again later."
+            )
+
         logger.info(f"Fetched {len(all_players)} total players from FPL API")
 
         team_players = [p for p in all_players if p.get("id") in player_ids]
         logger.info(f"Found {len(team_players)} team players")
 
-        if len(team_players) != len(player_ids):
+        if len(team_players) < len(player_ids) and len(team_players) < 11:
             missing_ids = set(player_ids) - {p.get("id") for p in team_players}
             logger.warning(f"Some players not found: {missing_ids}")
             raise HTTPException(status_code=400, detail=f"Players not found: {missing_ids}")
