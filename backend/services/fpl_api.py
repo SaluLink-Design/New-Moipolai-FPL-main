@@ -7,6 +7,7 @@ import asyncio
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from config import settings
+from services.data_cache_service import data_cache
 
 logger = logging.getLogger(__name__)
 
