@@ -76,6 +76,10 @@ class DataCacheService:
         self.cache_timestamp = None
         logger.info("Cache cleared")
 
+    def get_demo_players(self) -> List[Dict[str, Any]]:
+        """Get demo player data for fallback/testing."""
+        return DEMO_PLAYERS
+
 
 # Global cache instance
 data_cache = DataCacheService()
