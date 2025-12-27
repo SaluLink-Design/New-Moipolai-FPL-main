@@ -218,7 +218,14 @@ class FPLAPIClient:
                     try:
                         players = await self._supabase_service.get_players()
                         teams = await self._supabase_service.get_teams()
-                        gameweeks = await self._supabase_service.client.table("gameweeks").select("*").execute().data if self._supabase_service.client else []
+                        gameweeks = []
+
+                        try:
+                            if self._supabase_service.client:
+                                response = self._supabase_service.client.table("gameweeks").select("*").execute()
+                                gameweeks = response.data if response.data else []
+                        except Exception:
+                            gameweeks = []
 
                         if players and teams:
                             self._bootstrap_data = {
