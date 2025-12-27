@@ -302,9 +302,11 @@ class FPLAPIClient:
                 logger.warning("Using stale cached players as last resort")
                 return cached_players
 
-            # If all fails, raise the original error
-            logger.error("No data available from any source")
-            raise
+            # Final fallback - use demo data if absolutely nothing else works
+            logger.warning("Using demo data as final fallback")
+            demo_players = data_cache.get_demo_players()
+            data_cache.set_players(demo_players)
+            return demo_players
     
     async def get_teams(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
