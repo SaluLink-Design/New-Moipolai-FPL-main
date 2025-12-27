@@ -62,12 +62,18 @@ const TeamAnalysis = () => {
                 errorMessage = 'Request timed out. The server is taking longer than expected. Please try again in a moment.'
             } else if (err.response?.status === 400) {
                 errorMessage = err.response?.data?.detail || 'Invalid team data. Please check your screenshot and try again.'
+            } else if (err.response?.status === 503) {
+                errorMessage = err.response?.data?.detail || 'FPL API is currently unavailable. Please try again later.'
+            } else if (err.response?.status === 504) {
+                errorMessage = err.response?.data?.detail || 'Server is taking too long to respond. Please try again in a moment.'
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.'
             } else if (err.message === 'Network Error') {
                 errorMessage = 'Network error. Please check your connection and try again.'
             } else if (err.response?.data?.detail) {
                 errorMessage = err.response.data.detail
+            } else if (err.message) {
+                errorMessage = err.message
             }
 
             setError(errorMessage)
@@ -105,12 +111,18 @@ const TeamAnalysis = () => {
                 errorMessage = 'Request timed out. The server is taking longer than expected. Please try again in a moment.'
             } else if (err.response?.status === 400) {
                 errorMessage = err.response?.data?.detail || 'Invalid team data.'
+            } else if (err.response?.status === 503) {
+                errorMessage = err.response?.data?.detail || 'FPL API is currently unavailable. Please try again later.'
+            } else if (err.response?.status === 504) {
+                errorMessage = err.response?.data?.detail || 'Server is taking too long to respond. Please try again in a moment.'
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.'
             } else if (err.message === 'Network Error') {
                 errorMessage = 'Network error. Please check your connection and try again.'
             } else if (err.response?.data?.detail) {
                 errorMessage = err.response.data.detail
+            } else if (err.message) {
+                errorMessage = err.message
             }
 
             setError(errorMessage)

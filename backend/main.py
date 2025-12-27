@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 import logging
+import asyncio
 from pathlib import Path
 
 from config import settings
@@ -47,6 +48,19 @@ async def lifespan(app: FastAPI):
     await cache_manager.connect()
     await fpl_client.initialize()
     await supabase_service.connect()
+
+    # Pre-warm FPL cache on startup (with timeout)
+    try:
+        logger.info("Pre-warming FPL API cache on startup...")
+        await asyncio.wait_for(
+            fpl_client.get_bootstrap_static(force_refresh=True),
+            timeout=30.0
+        )
+        logger.info("FPL API cache pre-warmed successfully")
+    except asyncio.TimeoutError:
+        logger.warning("FPL API cache pre-warm timed out (30s), will use fallback data")
+    except Exception as e:
+        logger.warning(f"FPL API cache pre-warm failed: {e}, will use fallback data")
 
     logger.info("FPL AI Model API started successfully")
     

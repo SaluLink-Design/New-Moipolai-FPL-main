@@ -3,9 +3,11 @@ FPL API Client - Handles all interactions with the official FPL API
 """
 import httpx
 import logging
+import asyncio
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from config import settings
+from services.data_cache_service import data_cache
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +128,7 @@ class FPLAPIClient:
         """Initialize the HTTP client."""
         self.client = httpx.AsyncClient(
             base_url=self.base_url,
-            timeout=60.0,  # 60 seconds for slower connections
+            timeout=30.0,  # 30 seconds timeout for FPL API calls
             headers={
                 "User-Agent": "FPL-AI-Model/1.0"
             }
@@ -204,7 +206,43 @@ class FPLAPIClient:
 
         try:
             logger.info("Fetching bootstrap-static data from FPL API")
-            response = await self.client.get("/bootstrap-static/")
+            # Wrap with timeout to prevent hanging for too long
+            try:
+                response = await asyncio.wait_for(
+                    self.client.get("/bootstrap-static/"),
+                    timeout=60.0  # 60 second timeout
+                )
+            except asyncio.TimeoutError:
+                logger.warning("FPL API bootstrap fetch exceeded 60 second timeout, attempting Supabase fallback")
+                # Try to use Supabase as fallback
+                if self._supabase_service:
+                    try:
+                        players = await self._supabase_service.get_players()
+                        teams = await self._supabase_service.get_teams()
+                        gameweeks = []
+
+                        try:
+                            if self._supabase_service.client:
+                                response = self._supabase_service.client.table("gameweeks").select("*").execute()
+                                gameweeks = response.data if response.data else []
+                        except Exception:
+                            gameweeks = []
+
+                        if players and teams:
+                            self._bootstrap_data = {
+                                "elements": players,
+                                "teams": teams,
+                                "events": gameweeks
+                            }
+                            self._bootstrap_timestamp = datetime.now()
+                            logger.info("Using Supabase data as FPL API fallback")
+                            return self._bootstrap_data
+                    except Exception as fallback_error:
+                        logger.error(f"Supabase fallback failed: {fallback_error}")
+
+                # If fallback fails, raise timeout error
+                raise httpx.TimeoutException("FPL API bootstrap fetch timed out after 60 seconds")
+
             response.raise_for_status()
 
             self._bootstrap_data = response.json()
@@ -213,9 +251,6 @@ class FPLAPIClient:
             logger.info(f"Bootstrap data fetched successfully. "
                        f"Players: {len(self._bootstrap_data.get('elements', []))}, "
                        f"Teams: {len(self._bootstrap_data.get('teams', []))}")
-
-            # Note: Supabase sync is not awaited here to avoid delaying the response
-            # It will happen in the background
 
             return self._bootstrap_data
 
@@ -226,12 +261,52 @@ class FPLAPIClient:
     async def get_players(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
         Get all players (elements) from bootstrap data.
-        
+        Uses in-memory cache, falls back to Supabase if FPL API is unavailable.
+
         Returns:
             List of player dictionaries
         """
-        bootstrap = await self.get_bootstrap_static(force_refresh)
-        return bootstrap.get("elements", [])
+        # Check in-memory cache first
+        if not force_refresh:
+            cached_players = data_cache.get_players()
+            if cached_players:
+                logger.debug(f"Using {len(cached_players)} players from memory cache")
+                return cached_players
+
+        try:
+            bootstrap = await self.get_bootstrap_static(force_refresh)
+            players = bootstrap.get("elements", [])
+
+            # Cache in memory for fast access
+            if players:
+                data_cache.set_players(players)
+
+            return players
+        except Exception as e:
+            logger.warning(f"Failed to fetch players from FPL API: {e}. Attempting fallbacks...")
+
+            # Fallback to Supabase
+            if self._supabase_service:
+                try:
+                    players = await self._supabase_service.get_players()
+                    if players:
+                        logger.info(f"Retrieved {len(players)} players from Supabase fallback")
+                        data_cache.set_players(players)
+                        return players
+                except Exception as fallback_error:
+                    logger.error(f"Supabase fallback also failed: {fallback_error}")
+
+            # Last resort - check if we have any cached data
+            cached_players = data_cache.get_players()
+            if cached_players:
+                logger.warning("Using stale cached players as last resort")
+                return cached_players
+
+            # Final fallback - use demo data if absolutely nothing else works
+            logger.warning("Using demo data as final fallback")
+            demo_players = data_cache.get_demo_players()
+            data_cache.set_players(demo_players)
+            return demo_players
     
     async def get_teams(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """

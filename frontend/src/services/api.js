@@ -9,7 +9,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 120000, // 2 minutes for slower backend operations
+    timeout: 180000, // 3 minutes for slower backend operations
 })
 
 // Request interceptor
@@ -76,7 +76,7 @@ export const apiService = {
 
     // Teams endpoints
     getTeamAnalysis: (teamData) =>
-        api.post('/api/teams/analysis', teamData),
+        api.post('/api/teams/analyze', teamData),
 
     getCaptainSuggestion: (teamData) =>
         api.post('/api/teams/captain', teamData),

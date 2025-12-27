@@ -4,6 +4,7 @@ Teams API Routes
 from fastapi import APIRouter, HTTPException
 from typing import List
 import logging
+import httpx
 
 from models.fpl_models import TeamAnalysis, PlayerPrediction
 from services.fpl_api import fpl_client
@@ -32,13 +33,27 @@ async def analyze_team(team_data: dict):
             raise HTTPException(status_code=400, detail="No players provided")
 
         logger.info(f"Fetching player data for {len(player_ids)} players")
-        all_players = await fpl_client.get_players()
+        try:
+            all_players = await fpl_client.get_players()
+        except httpx.TimeoutException:
+            logger.error("FPL API timeout while fetching player data")
+            raise HTTPException(
+                status_code=504,
+                detail="FPL API is responding slowly. Please try again in a moment."
+            )
+        except Exception as e:
+            logger.error(f"Failed to fetch player data: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to fetch player data. Please try again later."
+            )
+
         logger.info(f"Fetched {len(all_players)} total players from FPL API")
 
         team_players = [p for p in all_players if p.get("id") in player_ids]
         logger.info(f"Found {len(team_players)} team players")
 
-        if len(team_players) != len(player_ids):
+        if len(team_players) < len(player_ids) and len(team_players) < 11:
             missing_ids = set(player_ids) - {p.get("id") for p in team_players}
             logger.warning(f"Some players not found: {missing_ids}")
             raise HTTPException(status_code=400, detail=f"Players not found: {missing_ids}")
@@ -85,6 +100,12 @@ async def analyze_team(team_data: dict):
 
     except HTTPException:
         raise
+    except httpx.TimeoutException as e:
+        logger.error(f"FPL API timeout while analyzing team: {e}", exc_info=True)
+        raise HTTPException(status_code=504, detail="FPL API service is slow. Please try again in a moment.")
+    except httpx.HTTPError as e:
+        logger.error(f"FPL API error while analyzing team: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="FPL API is currently unavailable. Please try again later.")
     except Exception as e:
         logger.error(f"Error analyzing team: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -123,6 +144,12 @@ async def get_captain_suggestion(team_data: dict):
             "vice_captain": _create_player_prediction(vice_captain)
         }
 
+    except httpx.TimeoutException as e:
+        logger.error(f"FPL API timeout while getting captain suggestion: {e}")
+        raise HTTPException(status_code=504, detail="FPL API service is slow. Please try again.")
+    except httpx.HTTPError as e:
+        logger.error(f"FPL API error while getting captain suggestion: {e}")
+        raise HTTPException(status_code=503, detail="FPL API is currently unavailable.")
     except Exception as e:
         logger.error(f"Error getting captain suggestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -155,6 +182,12 @@ async def get_bench_order(team_data: dict):
             "bench_order": [p["id"] for p in bench_players]
         }
 
+    except httpx.TimeoutException as e:
+        logger.error(f"FPL API timeout while optimizing bench: {e}")
+        raise HTTPException(status_code=504, detail="FPL API service is slow. Please try again.")
+    except httpx.HTTPError as e:
+        logger.error(f"FPL API error while optimizing bench: {e}")
+        raise HTTPException(status_code=503, detail="FPL API is currently unavailable.")
     except Exception as e:
         logger.error(f"Error optimizing bench: {e}")
         raise HTTPException(status_code=500, detail=str(e))
