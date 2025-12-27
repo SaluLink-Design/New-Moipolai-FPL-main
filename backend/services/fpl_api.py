@@ -205,7 +205,36 @@ class FPLAPIClient:
 
         try:
             logger.info("Fetching bootstrap-static data from FPL API")
-            response = await self.client.get("/bootstrap-static/")
+            # Wrap with timeout to prevent hanging for too long
+            try:
+                response = await asyncio.wait_for(
+                    self.client.get("/bootstrap-static/"),
+                    timeout=60.0  # 60 second timeout
+                )
+            except asyncio.TimeoutError:
+                logger.warning("FPL API bootstrap fetch exceeded 60 second timeout, attempting Supabase fallback")
+                # Try to use Supabase as fallback
+                if self._supabase_service:
+                    try:
+                        players = await self._supabase_service.get_players()
+                        teams = await self._supabase_service.get_teams()
+                        gameweeks = await self._supabase_service.client.table("gameweeks").select("*").execute().data if self._supabase_service.client else []
+
+                        if players and teams:
+                            self._bootstrap_data = {
+                                "elements": players,
+                                "teams": teams,
+                                "events": gameweeks
+                            }
+                            self._bootstrap_timestamp = datetime.now()
+                            logger.info("Using Supabase data as FPL API fallback")
+                            return self._bootstrap_data
+                    except Exception as fallback_error:
+                        logger.error(f"Supabase fallback failed: {fallback_error}")
+
+                # If fallback fails, raise timeout error
+                raise httpx.TimeoutException("FPL API bootstrap fetch timed out after 60 seconds")
+
             response.raise_for_status()
 
             self._bootstrap_data = response.json()
@@ -214,9 +243,6 @@ class FPLAPIClient:
             logger.info(f"Bootstrap data fetched successfully. "
                        f"Players: {len(self._bootstrap_data.get('elements', []))}, "
                        f"Teams: {len(self._bootstrap_data.get('teams', []))}")
-
-            # Note: Supabase sync is not awaited here to avoid delaying the response
-            # It will happen in the background
 
             return self._bootstrap_data
 
